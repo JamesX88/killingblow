@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatRef = db.ref('chat');
     const playersRef = db.ref('players');
     const bossRef = db.ref('boss');
+    const attackedPlayersRef = db.ref('attackedPlayers'); // New reference for tracking attackers
     const killedBossesRef = db.ref('killedBosses');
 
     const loginButton = document.getElementById('login-button');
@@ -342,24 +343,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                     const goldDrop = Math.floor(Math.random() * 101) + 50;
-                    playersRef.once('value', snapshot => {
+                    attackedPlayersRef.once('value', snapshot => {
                         snapshot.forEach(childSnapshot => {
-                            const user = childSnapshot.val();
-                            if (user && user.damage > 0) { // Check if user and damage are not null
-                                playersRef.child(childSnapshot.key).transaction(playerData => {
-                                    if (playerData) {
-                                        playerData.gold = (playerData.gold || 0) + goldDrop;
-                                        playerData.bossTokens = (playerData.bossTokens || 0) + 1; // Add Boss Token
-                                        // If this is the current player, update their gold variable and UI
-                                        if (childSnapshot.key === userId) {
-                                            gold = playerData.gold;
-                                            bossTokens = playerData.bossTokens; // Update Boss Tokens
-                                            updatePlayerStats();
-                                        }
+                            const attackerId = childSnapshot.key;
+                            playersRef.child(attackerId).transaction(playerData => {
+                                if (playerData) {
+                                    playerData.gold = (playerData.gold || 0) + goldDrop;
+                                    playerData.bossTokens = (playerData.bossTokens || 0) + 1; // Add Boss Token
+                                    // If this is the current player, update their gold variable and UI
+                                    if (attackerId === userId) {
+                                        gold = playerData.gold;
+                                        bossTokens = playerData.bossTokens; // Update Boss Tokens
+                                        updatePlayerStats();
                                     }
-                                    return playerData;
-                                });
-                            }
+                                }
+                                return playerData;
+                            });
                         });
                     });
                     // Log killed boss
@@ -369,8 +368,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         killedBy: username,
                         timestamp: new Date().toISOString()
                     });
+                    attackedPlayersRef.remove(); // Clear attacked players after boss is killed
                     return createNewBoss(boss.maxHealth);
                 } else {
+                    // Add player to attackedPlayersRef
+                    attackedPlayersRef.child(userId).set(true);
                     return {
                         ...boss,
                         health: newHealth
