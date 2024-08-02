@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Killing Blow</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Killing Blow</h1>
+        <div id="auth-buttons">
+            <button id="login-button">Login</button>
+            <button id="register-button">Register</button>
+            <button id="logout-button" style="display: none;">Logout</button>
+            <button id="account-button" style="display: none;">Account</button>
+        </div>
+        <div id="hamburger-menu">
+            <div class="hamburger-icon">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <div class="hamburger-content">
+                <button id="hamburger-login-button">Login</button>
+                <button id="hamburger-register-button">Register</button>
+                <button id="hamburger-logout-button" style="display: none;">Logout</button>
+                <button id="hamburger-account-button" style="display: none;">Account</button>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div id="content-container">
+            <div id="game-container">
+                <section id="boss-section">
+                    <div id="boss">
+                        <h2 id="boss-name">Current Boss</h2>
+                        <img src="boss_monster.png" alt="Boss Image"/>
+                        <div id="health-bar-container">
+                            <div id="health-bar"></div>
+                        </div>
+                        <p>Health: <span id="boss-health">100</span></p>
+                        <button id="attack-button">Attack</button>
+                    </div>
+                </section>
+                <section id="player-stats-section">
+                    <div id="player-stats">
+                        <h2>Player Stats</h2>
+                        <p>Username: <span id="username"><a href="#" id="login-register-link">Login/Register</a></span></p>
+                        <p>Damage: <span id="player-damage">0</span> per click</p>
+                        <p>Gold: <span id="gold">0</span></p>
+                        <p>Killing Blows: <span id="killing-blows">0</span></p>
+                        <p>Boss Tokens: <span id="boss-tokens">0</span></p>
+                    </div>
+                </section>
+                <section id="upgrades-section">
+                    <h2>Upgrades</h2>
+                    <button id="upgrade-attack-damage" class="upgrade">Upgrade Attack Damage</button>
+                    <button id="upgrade-gold-drop" class="upgrade">Increase Gold Drop</button>
+                </section>
+                <section id="inventory-section">
+                    <h2>Inventory</h2>
+                    <p>No items yet.</p>
+                </section>
+                <section id="leaderboard-section">
+                    <h2>Leaderboard</h2>
+                    <ol id="leaderboard-list">
+                        <!-- List items will be populated dynamically -->
+                    </ol>
+                </section>
+                <section id="boss-tokens-leaderboard-section">
+                    <h2>Boss Tokens Leaderboard</h2>
+                    <ol id="boss-tokens-leaderboard-list">
+                        <!-- List items will be populated dynamically -->
+                    </ol>
+                </section>
+            </div>
+            <div id="chat-container">
+                <section id="chat-section">
+                    <h2>Chat</h2>
+                    <div id="chat-box">
+                        <div id="chat-messages"></div>
+                        <input type="text" id="chat-input" placeholder="Type a message...">
+                        <button id="send-button">Send</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 Killing Blow</p>
+    </footer>
+
+    <!-- Registration Modal -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="register-close">&times;</span>
+            <h2>Register</h2>
+            <input type="text" id="register-username" placeholder="Email">
+            <input type="text" id="register-display-name" placeholder="Username">
+            <input type="password" id="register-password" placeholder="Password">
+            <button id="register-submit">Register</button>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="login-close">&times;</span>
+            <h2>Login</h2>
+            <input type="text" id="login-username" placeholder="Email">
+            <input type="password" id="login-password" placeholder="Password">
+            <button id="login-submit">Login</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

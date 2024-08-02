@@ -1,0 +1,28 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "players": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "boss": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "killedBosses": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "leaderboard": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "chat": {
+      ".read": true,
+      ".write": "auth != null"
+    }
+  }
+}
