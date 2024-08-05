@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatRef = db.ref('chat');
     const playersRef = db.ref('players');
     const bossRef = db.ref('boss');
-    const attackedPlayersRef = db.ref('attackedPlayers'); // New reference for tracking attackers
     const killedBossesRef = db.ref('killedBosses');
+    const attackedPlayersRef = db.ref('attackedPlayers');
 
     const loginButton = document.getElementById('login-button');
     const registerButton = document.getElementById('register-button');
@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bossTokensElement = document.getElementById('boss-tokens');
     const leaderboardList = document.getElementById('leaderboard-list');
     const bossTokensLeaderboardList = document.getElementById('boss-tokens-leaderboard-list');
+    const goldLeaderboardList = document.getElementById('gold-leaderboard-list');
     const bossHealthElement = document.getElementById('boss-health');
     const healthBarElement = document.getElementById('health-bar');
     const bossNameElement = document.getElementById('boss-name');
@@ -343,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                     const goldDrop = Math.floor(Math.random() * 101) + 50;
-                    attackedPlayersRef.once('value', snapshot => {
+                    attackedPlayersRef.child(boss.id).once('value', snapshot => {
                         snapshot.forEach(childSnapshot => {
                             const attackerId = childSnapshot.key;
                             playersRef.child(attackerId).transaction(playerData => {
@@ -360,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return playerData;
                             });
                         });
+                        attackedPlayersRef.child(boss.id).remove(); // Clear attacked players for this boss after processing rewards
                     });
                     // Log killed boss
                     killedBossesRef.push({
@@ -368,11 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         killedBy: username,
                         timestamp: new Date().toISOString()
                     });
-                    attackedPlayersRef.remove(); // Clear attacked players after boss is killed
                     return createNewBoss(boss.maxHealth);
                 } else {
-                    // Add player to attackedPlayersRef
-                    attackedPlayersRef.child(userId).set(true);
+                    // Add player to attackedPlayersRef specific to the current boss ID
+                    attackedPlayersRef.child(`${boss.id}/${userId}`).set(true);
                     return {
                         ...boss,
                         health: newHealth
@@ -461,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Update Boss Tokens Leaderboard
         playersRef.orderByChild('bossTokens').limitToLast(3).once('value', snapshot => {
             bossTokensLeaderboardList.innerHTML = '';
             const leaderboardData = [];
@@ -472,8 +472,23 @@ document.addEventListener('DOMContentLoaded', () => {
             leaderboardData.sort((a, b) => b.bossTokens - a.bossTokens);
             leaderboardData.forEach(data => {
                 const listItem = document.createElement('li');
-                listItem.textContent = `${data.displayName} - ${data.bossTokens} Boss Tokens`;
+                listItem.textContent = `${data.displayName} - ${data.bossTokens} Tokens`;
                 bossTokensLeaderboardList.appendChild(listItem);
+            });
+        });
+
+        playersRef.orderByChild('gold').limitToLast(3).once('value', snapshot => {
+            goldLeaderboardList.innerHTML = '';
+            const leaderboardData = [];
+            snapshot.forEach(childSnapshot => {
+                const data = childSnapshot.val();
+                leaderboardData.push(data);
+            });
+            leaderboardData.sort((a, b) => b.gold - a.gold);
+            leaderboardData.forEach(data => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${data.displayName} - ${data.gold} Gold`;
+                goldLeaderboardList.appendChild(listItem);
             });
         });
     }
