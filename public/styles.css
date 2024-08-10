@@ -136,12 +136,12 @@ footer {
     width: 100%;
 }
 
-#leaderboard-list {
+#leaderboard-list, #boss-tokens-leaderboard-list, #life-tokens-leaderboard-list, #death-tokens-leaderboard-list, #gold-leaderboard-list {
     list-style-type: none;
     padding: 0;
 }
 
-#leaderboard-list li {
+#leaderboard-list li, #boss-tokens-leaderboard-list li, #life-tokens-leaderboard-list li, #death-tokens-leaderboard-list li, #gold-leaderboard-list li {
     background-color: #3c3c3c;
     margin: 0.5em 0;
     padding: 0.5em;

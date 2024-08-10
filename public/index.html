@@ -56,6 +56,8 @@
                         <p>Gold: <span id="gold">0</span></p>
                         <p>Killing Blows: <span id="killing-blows">0</span></p>
                         <p>Boss Tokens: <span id="boss-tokens">0</span></p>
+                        <p>Life Tokens: <span id="life-tokens">0</span></p>
+                        <p>Death Tokens: <span id="death-tokens">0</span></p>
                     </div>
                 </section>
                 <section id="upgrades-section">
@@ -69,21 +71,28 @@
                 </section>
                 <section id="leaderboard-section">
                     <h2>Leaderboard</h2>
-                    <ol id="leaderboard-list">
-                        <!-- List items will be populated dynamically -->
-                    </ol>
+                    <ol id="leaderboard-list"></ol>
                 </section>
                 <section id="boss-tokens-leaderboard-section">
                     <h2>Boss Tokens Leaderboard</h2>
-                    <ol id="boss-tokens-leaderboard-list">
-                        <!-- List items will be populated dynamically -->
-                    </ol>
+                    <ol id="boss-tokens-leaderboard-list"></ol>
+                </section>
+                <section id="life-tokens-leaderboard-section">
+                    <h2>Life Tokens Leaderboard</h2>
+                    <ol id="life-tokens-leaderboard-list"></ol>
+                </section>
+                <section id="death-tokens-leaderboard-section">
+                    <h2>Death Tokens Leaderboard</h2>
+                    <ol id="death-tokens-leaderboard-list"></ol>
                 </section>
                 <section id="gold-leaderboard-section">
                     <h2>Gold Leaderboard</h2>
-                    <ol id="gold-leaderboard-list">
-                        <!-- List items will be populated dynamically -->
-                    </ol>
+                    <ol id="gold-leaderboard-list"></ol>
+                </section>
+                <section id="pvp-lobbies-section">
+                    <h2>PvP Lobbies</h2>
+                    <button id="create-pvp-button">Create PvP Lobby</button>
+                    <ul id="pvp-lobbies-list"></ul>
                 </section>
             </div>
             <div id="chat-container">
@@ -122,6 +131,18 @@
             <input type="text" id="login-username" placeholder="Email">
             <input type="password" id="login-password" placeholder="Password">
             <button id="login-submit">Login</button>
+        </div>
+    </div>
+
+    <!-- PvP Modal -->
+    <div id="pvp-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="close-pvp-button">&times;</span>
+            <h2>Player vs Player</h2>
+            <p id="pvp-status"></p>
+            <p>Player: <span id="player-name"></span> | Health: <span id="player-health"></span></p>
+            <p>Opponent: <span id="opponent-name"></span> | Health: <span id="opponent-health"></span></p>
+            <button id="pvp-attack-button" disabled>Attack</button>
         </div>
     </div>
 

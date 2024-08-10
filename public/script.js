@@ -17,7 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const playersRef = db.ref('players');
     const bossRef = db.ref('boss');
     const killedBossesRef = db.ref('killedBosses');
-    const attackedPlayersRef = db.ref('attackedPlayers');
+    const pvpLobbiesRef = db.ref('pvpLobbies');
+    const completedMatchesRef = db.ref('completedMatches');
 
     const loginButton = document.getElementById('login-button');
     const registerButton = document.getElementById('register-button');
@@ -44,15 +45,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const goldElement = document.getElementById('gold');
     const killingBlowsElement = document.getElementById('killing-blows');
     const bossTokensElement = document.getElementById('boss-tokens');
+    const lifeTokensElement = document.getElementById('life-tokens');
+    const deathTokensElement = document.getElementById('death-tokens');
     const leaderboardList = document.getElementById('leaderboard-list');
-    const bossTokensLeaderboardList = document.getElementById('boss-tokens-leaderboard-list');
-    const goldLeaderboardList = document.getElementById('gold-leaderboard-list');
     const bossHealthElement = document.getElementById('boss-health');
     const healthBarElement = document.getElementById('health-bar');
     const bossNameElement = document.getElementById('boss-name');
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const hamburgerContent = document.querySelector('.hamburger-content');
     const hamburgerIcon = document.querySelector('.hamburger-icon');
+    const createPvpButton = document.getElementById('create-pvp-button');
+    const pvpLobbiesList = document.getElementById('pvp-lobbies-list');
+    const pvpModal = document.getElementById('pvp-modal');
+    const pvpStatus = document.getElementById('pvp-status');
+    const playerNameElement = document.getElementById('player-name');
+    const playerHealthElement = document.getElementById('player-health');
+    const opponentNameElement = document.getElementById('opponent-name');
+    const opponentHealthElement = document.getElementById('opponent-health');
+    const pvpAttackButton = document.getElementById('pvp-attack-button');
+    const closePvpButton = document.getElementById('close-pvp-button');
 
     let loggedIn = false;
     let username = '';
@@ -61,7 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let gold = 0;
     let killingBlows = 0;
     let bossTokens = 0;
+    let lifeTokens = 0;
+    let deathTokens = 0;
     let bossId = '';
+    let currentMatchId = null;
+    let isPlayerTurn = false;
 
     const prefixes = ["Ancient", "Dark", "Eternal", "Mystic", "Fierce", "Savage", "Infernal"];
     const coreNames = ["Dragon", "Warlord", "Titan", "Behemoth", "Golem", "Hydra", "Phoenix"];
@@ -127,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
         goldElement.textContent = gold;
         killingBlowsElement.textContent = killingBlows;
         bossTokensElement.textContent = bossTokens;
+        lifeTokensElement.textContent = lifeTokens;
+        deathTokensElement.textContent = deathTokens;
     }
 
     function addChatMessage(username, message) {
@@ -184,7 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         damage: 1,
                         gold: 0,
                         killingBlows: 0,
-                        bossTokens: 0
+                        bossTokens: 0,
+                        lifeTokens: 0,
+                        deathTokens: 0
                     });
                     alert('Registration successful');
                     closeModal(registerModal);
@@ -243,6 +262,29 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchPlayerData();
             fetchChatMessages();
             updateLeaderboard();
+            
+            // Check if the user has an active lobby and rejoin
+            const lobbyId = `lobby_${userId}`;
+            pvpLobbiesRef.child(lobbyId).once('value', snapshot => {
+                if (snapshot.exists()) {
+                    currentMatchId = lobbyId;
+                    showModal(pvpModal);
+                    pvpLobbiesRef.child(lobbyId).on('value', updatePvpModal);
+                }
+            });
+    
+            // Also check if the user is player2 in any lobby
+            pvpLobbiesRef.once('value', snapshot => {
+                snapshot.forEach(childSnapshot => {
+                    const lobby = childSnapshot.val();
+                    if (lobby.player2 && lobby.player2.id === userId) {
+                        currentMatchId = childSnapshot.key;
+                        showModal(pvpModal);
+                        pvpLobbiesRef.child(currentMatchId).on('value', updatePvpModal);
+                    }
+                });
+            });
+    
         } else {
             loggedIn = false;
             username = '';
@@ -250,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         toggleAuthButtons();
     });
+    
 
     sendButton.addEventListener('click', () => {
         const message = chatInput.value.trim();
@@ -344,24 +387,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                     const goldDrop = Math.floor(Math.random() * 101) + 50;
-                    attackedPlayersRef.child(boss.id).once('value', snapshot => {
+                    playersRef.once('value', snapshot => {
                         snapshot.forEach(childSnapshot => {
-                            const attackerId = childSnapshot.key;
-                            playersRef.child(attackerId).transaction(playerData => {
-                                if (playerData) {
-                                    playerData.gold = (playerData.gold || 0) + goldDrop;
-                                    playerData.bossTokens = (playerData.bossTokens || 0) + 1; // Add Boss Token
-                                    // If this is the current player, update their gold variable and UI
-                                    if (attackerId === userId) {
-                                        gold = playerData.gold;
-                                        bossTokens = playerData.bossTokens; // Update Boss Tokens
-                                        updatePlayerStats();
+                            const user = childSnapshot.val();
+                            if (user && user.damage > 0) { // Check if user and damage are not null
+                                playersRef.child(childSnapshot.key).transaction(playerData => {
+                                    if (playerData) {
+                                        playerData.gold = (playerData.gold || 0) + goldDrop;
+                                        playerData.bossTokens = (playerData.bossTokens || 0) + 1; // Add a boss token
+                                        // If this is the current player, update their gold variable and UI
+                                        if (childSnapshot.key === userId) {
+                                            gold = playerData.gold;
+                                            bossTokens = playerData.bossTokens; // Update boss tokens for the current player
+                                            updatePlayerStats();
+                                        }
                                     }
-                                }
-                                return playerData;
-                            });
+                                    return playerData;
+                                });
+                            }
                         });
-                        attackedPlayersRef.child(boss.id).remove(); // Clear attacked players for this boss after processing rewards
                     });
                     // Log killed boss
                     killedBossesRef.push({
@@ -372,8 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     return createNewBoss(boss.maxHealth);
                 } else {
-                    // Add player to attackedPlayersRef specific to the current boss ID
-                    attackedPlayersRef.child(`${boss.id}/${userId}`).set(true);
                     return {
                         ...boss,
                         health: newHealth
@@ -462,21 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        playersRef.orderByChild('bossTokens').limitToLast(3).once('value', snapshot => {
-            bossTokensLeaderboardList.innerHTML = '';
-            const leaderboardData = [];
-            snapshot.forEach(childSnapshot => {
-                const data = childSnapshot.val();
-                leaderboardData.push(data);
-            });
-            leaderboardData.sort((a, b) => b.bossTokens - a.bossTokens);
-            leaderboardData.forEach(data => {
-                const listItem = document.createElement('li');
-                listItem.textContent = `${data.displayName} - ${data.bossTokens} Tokens`;
-                bossTokensLeaderboardList.appendChild(listItem);
-            });
-        });
-
+        const goldLeaderboardList = document.getElementById('gold-leaderboard-list');
         playersRef.orderByChild('gold').limitToLast(3).once('value', snapshot => {
             goldLeaderboardList.innerHTML = '';
             const leaderboardData = [];
@@ -491,6 +519,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 goldLeaderboardList.appendChild(listItem);
             });
         });
+
+        const bossTokensLeaderboardList = document.getElementById('boss-tokens-leaderboard-list');
+        playersRef.orderByChild('bossTokens').limitToLast(3).once('value', snapshot => {
+            bossTokensLeaderboardList.innerHTML = '';
+            const leaderboardData = [];
+            snapshot.forEach(childSnapshot => {
+                const data = childSnapshot.val();
+                leaderboardData.push(data);
+            });
+            leaderboardData.sort((a, b) => b.bossTokens - a.bossTokens);
+            leaderboardData.forEach(data => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${data.displayName} - ${data.bossTokens} Boss Tokens`;
+                bossTokensLeaderboardList.appendChild(listItem);
+            });
+        });
+
+        const lifeTokensLeaderboardList = document.getElementById('life-tokens-leaderboard-list');
+        playersRef.orderByChild('lifeTokens').limitToLast(3).once('value', snapshot => {
+            lifeTokensLeaderboardList.innerHTML = '';
+            const leaderboardData = [];
+            snapshot.forEach(childSnapshot => {
+                const data = childSnapshot.val();
+                leaderboardData.push(data);
+            });
+            leaderboardData.sort((a, b) => b.lifeTokens - a.lifeTokens);
+            leaderboardData.forEach(data => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${data.displayName} - ${data.lifeTokens} Life Tokens`;
+                lifeTokensLeaderboardList.appendChild(listItem);
+            });
+        });
+
+        const deathTokensLeaderboardList = document.getElementById('death-tokens-leaderboard-list');
+        playersRef.orderByChild('deathTokens').limitToLast(3).once('value', snapshot => {
+            deathTokensLeaderboardList.innerHTML = '';
+            const leaderboardData = [];
+            snapshot.forEach(childSnapshot => {
+                const data = childSnapshot.val();
+                leaderboardData.push(data);
+            });
+            leaderboardData.sort((a, b) => b.deathTokens - a.deathTokens);
+            leaderboardData.forEach(data => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${data.displayName} - ${data.deathTokens} Death Tokens`;
+                deathTokensLeaderboardList.appendChild(listItem);
+            });
+        });
     }
 
     // Fetch player data for the logged-in user
@@ -503,6 +579,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     gold = data.gold;
                     killingBlows = data.killingBlows;
                     bossTokens = data.bossTokens;
+                    lifeTokens = data.lifeTokens;
+                    deathTokens = data.deathTokens;
                     updatePlayerStats();
                 }
             });
@@ -531,4 +609,179 @@ document.addEventListener('DOMContentLoaded', () => {
             hamburgerContent.style.display = 'none';
         }
     });
+
+    createPvpButton.addEventListener('click', () => {
+        if (!loggedIn) {
+            alert('You must be logged in to create a PvP lobby');
+            return;
+        }
+    
+        const lobbyId = `lobby_${userId}`;
+        const lobbyData = {
+            player1: {
+                id: userId,
+                displayName: username,
+                health: 100
+            },
+            player2: null,
+            status: 'waiting',
+            turn: userId
+        };
+    
+        pvpLobbiesRef.child(lobbyId).set(lobbyData).then(() => {
+            currentMatchId = lobbyId;
+            showModal(pvpModal);
+            pvpStatus.textContent = 'Waiting for opponent...';
+            playerNameElement.textContent = username;
+            playerHealthElement.textContent = 100;
+            opponentNameElement.textContent = 'Opponent';
+            opponentHealthElement.textContent = '';
+            
+            // Listen for changes in the lobby so the creator can see when an opponent joins
+            pvpLobbiesRef.child(lobbyId).on('value', updatePvpModal);
+        }).catch(error => {
+            console.error('Error creating PvP lobby:', error);
+        });
+    });
+    
+
+    function listPvpLobbies() {
+        pvpLobbiesRef.on('child_added', snapshot => {
+            const lobby = snapshot.val();
+            if (lobby.status === 'waiting') {
+                const listItem = document.createElement('li');
+                listItem.setAttribute('data-key', snapshot.key);
+                listItem.textContent = `${lobby.player1.displayName}'s Lobby`;
+                const joinButton = document.createElement('button');
+                joinButton.textContent = 'Join Lobby';
+                joinButton.addEventListener('click', () => joinPvpLobby(snapshot.key));
+                listItem.appendChild(joinButton);
+                pvpLobbiesList.appendChild(listItem);
+            }
+        });
+    
+        pvpLobbiesRef.on('child_removed', snapshot => {
+            const lobbyKey = snapshot.key;
+            const lobbyItem = document.querySelector(`li[data-key="${lobbyKey}"]`);
+            if (lobbyItem) {
+                lobbyItem.remove();
+            }
+        });
+    }
+    
+
+    function joinPvpLobby(lobbyId) {
+        if (!loggedIn) {
+            alert('You must be logged in to join a PvP lobby');
+            return;
+        }
+    
+        console.log(`Attempting to join lobby with ID: ${lobbyId}`);
+        
+        pvpLobbiesRef.child(lobbyId).transaction(lobby => {
+            if (lobby && !lobby.player2) {
+                lobby.player2 = {
+                    id: userId,
+                    displayName: username,
+                    health: 100
+                };
+                lobby.status = 'active';
+                console.log(`Player 2 joined: ${username}`);
+                return lobby;
+            }
+            return lobby;
+        }, (error, committed, snapshot) => {
+            if (error) {
+                console.error('Error joining PvP lobby:', error);
+            } else if (!committed) {
+                console.log('Transaction not committed');
+            } else {
+                currentMatchId = lobbyId;
+                console.log(`Lobby joined successfully, lobbyId: ${lobbyId}`);
+                showModal(pvpModal);
+                pvpStatus.textContent = 'Battle begins!';
+                pvpAttackButton.disabled = snapshot.val().turn !== userId;
+                pvpLobbiesRef.child(lobbyId).on('value', updatePvpModal);
+            }
+        });
+    }
+    
+    function updatePvpModal(snapshot) {
+        const lobby = snapshot.val();
+        if (!lobby) return;
+    
+        console.log('Updating PvP modal with lobby data:', lobby);
+    
+        if (lobby.player2) { // Ensure player2 exists before updating
+            playerNameElement.textContent = lobby.player1.id === userId ? lobby.player1.displayName : lobby.player2.displayName;
+            opponentNameElement.textContent = lobby.player1.id === userId ? lobby.player2.displayName : lobby.player1.displayName;
+            playerHealthElement.textContent = lobby.player1.id === userId ? lobby.player1.health : lobby.player2.health;
+            opponentHealthElement.textContent = lobby.player1.id === userId ? lobby.player2.health : lobby.player1.health;
+            isPlayerTurn = lobby.turn === userId;
+            pvpAttackButton.disabled = !isPlayerTurn;
+    
+            if (lobby.status === 'completed') {
+                pvpStatus.textContent = lobby.winner === userId ? 'You won!' : 'You lost!';
+                console.log('Match completed, winner:', lobby.winner);
+    
+                if (lobby.winner === userId) {
+                    playersRef.child(userId).transaction(player => {
+                        player.lifeTokens = (player.lifeTokens || 0) + 1;
+                        return player;
+                    });
+                } else {
+                    playersRef.child(userId).transaction(player => {
+                        player.deathTokens = (player.deathTokens || 0) + 1;
+                        return player;
+                    });
+                }
+                completedMatchesRef.push(lobby);
+                pvpLobbiesRef.child(currentMatchId).remove();
+            } else {
+                pvpStatus.textContent = isPlayerTurn ? 'Your turn!' : 'Opponent\'s turn...';
+                console.log('Match ongoing, player turn:', isPlayerTurn ? 'You' : 'Opponent');
+            }
+        } else {
+            console.log('Waiting for opponent...');
+            pvpStatus.textContent = 'Waiting for opponent...';
+        }
+    }
+    
+    
+    
+
+    pvpAttackButton.addEventListener('click', () => {
+        if (!isPlayerTurn || !currentMatchId) return;
+
+        pvpLobbiesRef.child(currentMatchId).transaction(lobby => {
+            if (!lobby) return;
+
+            const opponent = lobby.player1.id === userId ? lobby.player2 : lobby.player1;
+            const player = lobby.player1.id === userId ? lobby.player1 : lobby.player2;
+
+            const damage = Math.floor(Math.random() * 10) + 1;
+            const criticalHit = Math.random() < 0.05;
+            const finalDamage = criticalHit ? damage * 2 : damage;
+
+            opponent.health -= finalDamage;
+            if (opponent.health <= 0) {
+                lobby.status = 'completed';
+                lobby.winner = userId;
+            } else {
+                lobby.turn = opponent.id;
+            }
+
+            return lobby;
+        }).then(() => {
+            pvpLobbiesRef.child(currentMatchId).once('value').then(updatePvpModal);
+        }).catch(error => {
+            console.error('Error updating PvP match:', error);
+        });
+    });
+
+    closePvpButton.addEventListener('click', () => {
+        closeModal(pvpModal);
+    });
+
+    listPvpLobbies();
 });

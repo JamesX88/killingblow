@@ -3,25 +3,25 @@
     ".read": "auth != null",
     ".write": "auth != null",
     "players": {
-      "$uid": {
-        ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
-      }
+      ".indexOn": ["killingBlows", "bossTokens", "gold", "lifeTokens", "deathTokens"]
+    },
+    "pvpMatches": {
+      ".indexOn": "status"
+    },
+    "chat": {
+      ".read": true,
+      ".write": "auth != null"
     },
     "boss": {
       ".read": true,
       ".write": "auth != null"
     },
     "killedBosses": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "pvpQueue": {
       ".read": "auth != null",
-      ".write": "auth != null"
-    },
-    "leaderboard": {
-      ".read": true,
-      ".write": "auth != null"
-    },
-    "chat": {
-      ".read": true,
       ".write": "auth != null"
     }
   }
